@@ -46,7 +46,7 @@
 \section{Motivation}
 Precisely localizing moving platforms using inertial sensors is a fundamental problem in robotics. These sensors, such as gyroscopes, accelerometers, and magnetometers, allow changes in position and orientation (together, ``pose") to be determined over short time scales in a process called \textit{dead reckoning}. This approach is used, for instance, in aerospace where precise estimates of aircraft pose may lead to safer landings. However, the cheapest sensors provide noisy measurements which cause dead-reckoning to be generally ineffective over long periods of time. 
 
-MEMS magnetometers, which are used as digital compasses to provide estimates of orientation with respect to the Earth's magnetic field, can provide erroneous estimates due to the presence of magnetic material near the sensor, unmodeled geological perturbations in the Earth's field, miscalibration, and white observation noise. This can lead to uncertainty in orientation measurements on the order of several degrees \cite{introtoiner}. The error, in turn, causes exponentially-growing errors in position estimation, as we will discuss in Section \ref{sec:posest}. As a result, absolute measurements of orientation which are independent of magnetometers have direct utility in robotic state estimation.
+MEMS magnetometers, which are used as digital compasses to provide estimates of orientation with respect to the Earth's magnetic field, can provide erroneous estimates due to the presence of magnetic material near the sensor, unmodeled geological perturbations in the Earth's field, miscalibration, and white observation noise. This can lead to uncertainty in orientation measurements on the order of several degrees \cite{usinginertialsensors}. The error, in turn, causes exponentially-growing errors in position estimation, as we will discuss in Section \ref{sec:posest}. As a result, absolute measurements of orientation which are independent of magnetometers have direct utility in robotic state estimation.
 
 This project implements direct orientation measurement via computer vision horizon estimation. Using inertial and visual data collected on a supersonic sounding rocket in April 2019, we develop an algorithm for pose estimation which incorporates visual horizon estimation as an independent, redundant measure of orientation to address the deficiencies of magnetometers. As shown in Fig. \ref{fig:horizon_overview}, cameras mounted inside of the rocket face opposite directions so they can see the horizon. As a result, changes in rocket attitude manifest in the camera image as coupled and opposite tilting, raising, or lowering of the horizon in each image. This allows direct estimation of pitch and yaw in a global frame.
 
@@ -96,7 +96,7 @@ To achieve a pose in the navigation frame based on measurements taken in the bod
   \fbox{
   \includegraphics[width=0.7\textwidth]{dr.png}
     }
-  \caption{Schematic illustration of dead-reckoning, where the accelerometer measurements (external specific force) and the gyroscope measurements (angular velocity) are integrated to position and orientation. From \cite{1}.}
+  \caption{Schematic illustration of dead-reckoning, where the accelerometer measurements (external specific force) and the gyroscope measurements (angular velocity) are integrated to position and orientation. From \cite{usinginertialsensors}.}
   \label{fig:dr}
 \end{figure}
 
@@ -183,7 +183,7 @@ where $[v \times]$ denotes the standard matrix cross product. This will allow us
 
 \section{Dynamic Model} \label{sec:dynmod}
 
-We borrow the dynamics equations from \cite{introtoiner} to relate the position $p_t^n$, velocity $v_t^n$, and orientation to the measured acceleration and gyroscope inputs via
+We borrow the dynamics equations from \cite{usinginertialsensors} to relate the position $p_t^n$, velocity $v_t^n$, and orientation to the measured acceleration and gyroscope inputs via
 \begin{align}
 \begin{pmatrix}
     p_{t + 1}^n\\
@@ -265,11 +265,11 @@ where the constant factor in the computation of $y_y$ relates the sensitivity of
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Sensor Fusion Algorithm} \label{sec:algorithm}
-We will use the multiplicative Extended Kalman Filter with a quaternion orientation estimation, modified to achieve pose estimation rather than orientation alone. The unmodified algorithm is from \cite{introtoiner}.
+We will use the multiplicative Extended Kalman Filter with a quaternion orientation estimation, modified to achieve pose estimation rather than orientation alone. The unmodified algorithm is from \cite{usinginertialsensors}.
 
 This Extended Kalman Filter operates on \textit{orientation deviations} rather than orientations alone. Rather than keeping track of the four-element orientation quaternion, only the three-element incremental rotation vector is recorded. Due to Euler's theorem, this representation is sufficient to store the entire state history at a given time. 
 
-As a consequence of working with orientation \textit{deviations}, the measurement matrix $H$ includes only the derivative of the measurement relationship. This will not be explained in detail in this draft, but its derived in \cite{introtoiner}.
+As a consequence of working with orientation \textit{deviations}, the measurement matrix $H$ includes only the derivative of the measurement relationship. This will not be explained in detail in this draft, but its derived in \cite{usinginertialsensors}.
 
 Additionally, a complete derivation of the Kalman filter algorithm is given in \cite{appliedkalman}, and a fascinating visual derivation is available at \hyperlink{https://www.bzarg.com/p/how-a-kalman-filter-works-in-pictures/}{this link}. However, these results will not be reproduced here.
 
@@ -277,7 +277,7 @@ Additionally, a complete derivation of the Kalman filter algorithm is given in \
 
 \begin{algorithm}
 \DontPrintSemicolon % Some LaTeX compilers require you to use \dontprintsemicolon instead
-\KwIn{Inertial data $\{ y_{a,t}, y_{\omega,t}\}_{t=1}^N$, magnetometer data $\{y_{m,t}\}_{t=1}^N$ and covariance matrices $\Sigma_\omega$, $\Sigma_a$, and $\Sigma_m$.}
+\KwIn{Inertial data $\{ y_{a,t}, y_{\omega,t}\}_{t=1}^N$, magnetometer data $\{y_{m,t}\}_{t=1}^N$, visual yaw and pitch estimates$\{y_{y,t}\}_{t=1}^N$ and $\{y_{p,t}\}_{t=1}^N$, and covariance matrices $\Sigma_\omega$, $\Sigma_a$,  $\Sigma_m$, $\Sigma_{y}$, and $\Sigma_{p}$.}
 \KwOut{An estimate of the state $\{x, y, z, v_x, v_y, v_z, \eta_i, \eta_j, \eta_k\}$ and orientation $\tilde{q}_{t | t}^{nb}\,$  for $t = 1, ... , N$.}
 Compute $\tilde{q}_{1 | 1}^{nb}\,$ using the TRIAD method and set the initial state covariance $P_{1|1}$.\\
 \For{$t = 2, ..., N$} {
@@ -492,7 +492,7 @@ By inspection of Figure \ref{fig:axes}, it can be seen that the slope and height
 We make the simplification that the lens distortion matrix $H$ can be neglected, which is reasonable given that the fisheye lens results in only minimal distortion of lines passing near the center of the image (Fig. \ref{fig:horizon_overview}. Thus, in theory, raw camera output can be converted to rocket pitch and yaw measurements by identifying the slope and height of the horizon in the image, inferring the corresponding camera attitude, and correcting for the relative rotation between the camera and rocket. The specifics of this technique are detailed in Section \ref{sec:pitchyawmeas}
 
 \begin{thebibliography}{9}
-\bibitem{introtoiner} 
+\bibitem{usinginertialsensors} 
 “Using Inertial Sensors for Position and Orientation Estimation - Now Foundations and Trends books.” [Online]. Available: https://ieeexplore.ieee.org/document/8187588. [Accessed: 03-Dec-2019].
 
 \bibitem{appliedkalman}
